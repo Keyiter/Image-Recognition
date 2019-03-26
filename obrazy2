@@ -1,0 +1,70 @@
+import numpy as np
+import cv2
+import imutils
+
+file = open("result.txt","w")
+for i in range (1,69):
+
+    #img_rgb = makeContour("kostka{}.jpg".format(i))
+    gray = cv2.imread('/kostki/kostka ({}).jpg'.format(i),0)
+    gray = cv2.GaussianBlur(gray,(9,9),0)
+    foundMax = 0
+    print("image loaded")
+    for z in range (1,9):
+        temp = cv2.imread('/kostki/temp ({}).jpg'.format(z),0)
+        temp = cv2.GaussianBlur(temp,(9,9),0)
+
+        print("template loaded")
+        w, h = temp.shape[::-1]
+        cv2.imwrite('temp.png', gray)
+
+        found = 0
+        for scale in np.linspace(0.5,1.0,10)[::-1]:
+            resized = imutils.resize(gray,width = int(gray.shape[1]*scale))
+            r = gray.shape[1] / float(resized.shape[1])
+
+            if(resized.shape[0] < h or resized.shape[1] < w):
+                break
+
+            #edged = cv2.Canny(resized,50,300)
+            edged = resized
+            result = cv2.matchTemplate(edged, temp, cv2.TM_CCOEFF_NORMED)
+
+            found = 0
+
+            clone = np.dstack([edged,edged,edged])
+            threshold = 0.8
+            loc = np.where(result >= threshold)
+            pt_last0 = []
+            pt_last1 = []
+            for pt in zip(*loc[::-1]):
+                nearby = True
+                if len(pt_last0) > 0:
+                    for j in range(0, len(pt_last0)):
+                        if ((pt_last0[j] - w <= pt[0] <= pt_last0[j] + w) and (pt_last1[j] -w <= pt[1] <= pt_last1[j] + w)):
+                            nearby = False
+                cv2.rectangle(clone, pt, (pt[0] + w, pt[1] + h), (0, 0, 255), 2)
+                if nearby:
+                    found = found + 1
+                    pt_last0.append(pt[0])
+                    pt_last1.append(pt[1])
+
+            if (found > foundMax):
+                foundMax = found
+                cv2.imwrite('result\kostka{}.png'.format(i),clone)
+            if foundMax == 6:
+                break
+        print("====== next template {} last found {}".format(z, foundMax))
+        if foundMax == 6:
+            break
+    file.write("zdjecie nr {}, znaleziono {} oczek\n".format(i,foundMax))
+    print("====================================== next image  {}".format(i))
+
+
+
+
+
+
+
+
+
